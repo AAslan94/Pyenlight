@@ -64,6 +64,10 @@ def as_array_of_size(x, N):
     if np.isscalar(x):
         return np.full(N, x)
     arr = np.asarray(x)
+    
+    #if arr.size == 1:
+     #   return np.full(N, arr.item())
+    
     if arr.size != N:
         raise ValueError(f"Expected size {N}, got {arr.size}")
     return arr

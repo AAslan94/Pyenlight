@@ -9,6 +9,31 @@ from gains import *
 from const import *
 from room import Room
 
+
+class ANManager:
+    """
+    Ambient Node Manager.
+
+    Manages auxiliary light sources in the environment that are not data-carrying 
+    Masters but contribute to the total optical power (and potentially interference). 
+    These could represent standard room lighting (ceiling lamps, desk lamps) that 
+    act as optical interference sources for the sensors.
+
+    Attributes:
+        OTx_elements (OpticalTxElements): The transmitter elements representing the ambient light sources.
+    """
+    def __init__(self,nb: NodeBuilder):
+      """
+      Initialize the Ambient Node Manager.
+
+      Creates the optical transmitter elements for ambient sources based on the 
+      builder configuration.
+
+      Args:
+          nb (NodeBuilder): The configured builder containing ambient node parameters.
+      """
+      self.OTx_elements = OpticalTxElements( r = nb.positions, n = nb.nT, m = nb.m, p = nb.tx_power)
+
 class SNManager:
     """
     Sensor Node Manager.
@@ -41,10 +66,9 @@ class SNManager:
       """
       self.tia = TIA(**nb.tia)
       self.no_sensors = nb.positions.shape[0]
-      self.BW = to_scal_Nx1(self.no_sensors,nb.BW)
-      
-      self.rx_type = np.atleast_1d(nb.rx_type)
-      
+      self.Rb_up = nb.Rb_up   #transform shape in PhyNet
+      self.n_sp_u = nb.n_sp_u #transform shape in Phynet
+      self.Rb_up_ir = nb.Rb_up_ir  
       self.rf_flag = 0
       self.ir_flag = 0
       self.ORx_elements = OpticalRxElements( r = nb.positions, n = nb.nR, type_Rx = nb.rx_type, fov = nb.FOV, A = nb.rx_area)
@@ -55,9 +79,9 @@ class SNManager:
         self.RFTx_elements = RFTxElements(r = nb.positions[nb.uplink_type == 1], p = to_scal_Nx1(nb.no_RF_uplinks,nb.RF_tx_power))
         self.rf_flag = nb.no_RF_uplinks
       #make the masks for the effective responsivity calculations
-      self.mask_VLC_filter = normalize_bool_array(nb.VLC_pass_filter,self.no_sensors) & (self.rx_type.reshape(-1,) == 0)
-      self.mask_pd_no_filter = ~normalize_bool_array(nb.VLC_pass_filter,self.no_sensors) & (self.rx_type.reshape(-1,) == 0)
-      self.mask_pv = (self.rx_type.reshape(-1,) == 1)
+      self.mask_VLC_filter = normalize_bool_array(nb.VLC_pass_filter,self.no_sensors) & (nb.rx_type.reshape(-1,) == 0)
+      self.mask_pd_no_filter = ~normalize_bool_array(nb.VLC_pass_filter,self.no_sensors) & (nb.rx_type.reshape(-1,) == 0)
+      self.mask_pv = (nb.rx_type.reshape(-1,) == 1)
 
       self.c_d = np.zeros([self.no_sensors]) #Array to hold effective responsivity values
       self.c_d_n = np.zeros([self.no_sensors]) #Array to hold effective responsivity values
@@ -123,7 +147,11 @@ class MNManager:
       """
       self.tia = TIA(**nb.tia)
       self.no_masters = nb.positions.shape[0]
-      self.BW = to_scal_Nx1(self.no_masters,nb.BW)
+      
+      self.Rb_down = nb.Rb_down  #transform shape in Phynet
+      self.n_sp_d = nb.n_sp_d  #transform shape in Phynet
+       
+      
       self.sensitivity = to_scal_Nx1(self.no_masters,nb.sensitivity)
       #make the masks for the effective responsivity calculations
       self.mask_IR_filter = normalize_bool_array(nb.IR_pass_filter,self.no_masters)
@@ -158,31 +186,7 @@ class MNManager:
       self.c_d[self.mask_pd_no_filter] = SpectralPhysics.get_responsivity_by_name("IR2PD")
 
       self.c_d_n[self.mask_IR_filter] = SpectralPhysics.get_responsivity_by_name("IR2PDwF")
-      self.c_d_n[self.mask_pd_no_filter] = SpectralPhysics.get_responsivity_by_name("IR2PD") 
-      
-class ANManager:
-    """
-    Ambient Node Manager.
-
-    Manages auxiliary light sources in the environment that are not data-carrying 
-    Masters but contribute to the total optical power (and potentially interference). 
-    These could represent standard room lighting (ceiling lamps, desk lamps) that 
-    act as optical interference sources for the sensors.
-
-    Attributes:
-        OTx_elements (OpticalTxElements): The transmitter elements representing the ambient light sources.
-    """
-    def __init__(self,nb: NodeBuilder):
-      """
-      Initialize the Ambient Node Manager.
-
-      Creates the optical transmitter elements for ambient sources based on the 
-      builder configuration.
-
-      Args:
-          nb (NodeBuilder): The configured builder containing ambient node parameters.
-      """
-      self.OTx_elements = OpticalTxElements( r = nb.positions, n = nb.nT, m = nb.m, p = nb.tx_power)
+      self.c_d_n[self.mask_pd_no_filter] = SpectralPhysics.get_responsivity_by_name("IR2PD")
       
       
 class oPhyGains:
@@ -217,10 +221,8 @@ class oPhyGains:
     self.mn = masters
     self.sn = sensors
     self.ambient = ambient
-     
     self.compute_gains()
     self.compute_ambient()
-
 
 
   def compute_gains(self):
@@ -296,16 +298,16 @@ class oPhyGains:
     Similar to downlink, but flows from Sensors to Masters.
     Uses `sn.OTx_elements.p` (Sensor Tx Power) and `mn.c_d` (Master Responsivity).
     """
+    if self.sn.ir_flag > 0:
+        self.p_u_los = self.h_u_los * self.sn.OTx_elements.p
+        self.p_u_diff = self.h_u_diff * self.sn.OTx_elements.p
+        self.p_u_ris = self.h_u_ris * self.sn.OTx_elements.p
 
-    self.p_u_los = self.h_u_los * self.sn.OTx_elements.p
-    self.p_u_diff = self.h_u_diff * self.sn.OTx_elements.p
-    self.p_u_ris = self.h_u_ris * self.sn.OTx_elements.p
+        self.i_u_los = self.p_u_los * self.mn.c_d
+        self.i_u_diff = self.p_u_diff * self.mn.c_d
+        self.i_u_ris = self.p_u_ris * self.mn.c_d
 
-    self.i_u_los = self.p_u_los * self.mn.c_d
-    self.i_u_diff = self.p_u_diff * self.mn.c_d
-    self.i_u_ris = self.p_u_ris * self.mn.c_d
-
-    self.i_u_signal = self.i_u_los + self.i_u_diff + self.i_u_ris
+        self.i_u_signal = self.i_u_los + self.i_u_diff + self.i_u_ris
 
   def compute_ambient(self):
     """
@@ -323,18 +325,19 @@ class oPhyGains:
     * Uses Noise Responsivity ($c_{d,n}$) because solar spectrum differs from LED spectrum.
     * Sums contributions from all window tiles to get total background current.
     """
+
     self.ix_d_noise = np.zeros((1, self.sn.ORx_elements.N))
     self.is_d_noise = np.zeros((1, self.sn.ORx_elements.N))
 
     # Uplink noise (at Masters)
     self.ix_u_noise = np.zeros((1, self.mn.ORx_elements.N))
-    self.is_u_noise = np.zeros((1, self.mn.ORx_elements.N))
-    
-    if self.ambient.OTx_elements is not None:
+    self.is_u_noise = np.zeros((1, self.mn.ORx_elements.N))  
+      
+    if self.ambient is not None:
       gains_down = Gains(self.room, self.sn.ORx_elements, self.ambient.OTx_elements)
 
       gains_down.los_channel_gains()
-      gains_down.diffuse_channel_gains()
+      gains_down.diffuse_channel_gains(bounces=SimulationDefaults.bounces)
 
       self.hx_d_los = gains_down.h_los
       self.hx_d_diff = gains_down.h_diff
@@ -349,7 +352,7 @@ class oPhyGains:
       gains_up = Gains(self.room, self.mn.ORx_elements, self.ambient.OTx_elements)
 
       gains_up.los_channel_gains()
-      gains_up.diffuse_channel_gains()
+      gains_up.diffuse_channel_gains(bounces=SimulationDefaults.bounces)
 
       self.hx_u_los = gains_up.h_los
       self.hx_u_diff = gains_up.h_diff
@@ -367,7 +370,7 @@ class oPhyGains:
       gains_s_up = Gains(self.room, self.mn.ORx_elements,self.room.Tx_windows_elements)
 
       gains_s_up.los_channel_gains()
-      gains_s_up.diffuse_channel_gains()
+      gains_s_up.diffuse_channel_gains(bounces=SimulationDefaults.bounces)
 
       self.hs_u_los = gains_s_up.h_los
       self.hs_u_diff = gains_s_up.h_diff
@@ -387,7 +390,7 @@ class oPhyGains:
       gains_s_down = Gains(self.room, self.sn.ORx_elements,self.room.Tx_windows_elements)
 
       gains_s_down.los_channel_gains()
-      gains_s_down.diffuse_channel_gains()
+      gains_s_down.diffuse_channel_gains(bounces=SimulationDefaults.bounces)
 
       self.hs_d_los = gains_s_down.h_los
       self.hs_d_diff = gains_s_down.h_diff
@@ -401,8 +404,4 @@ class oPhyGains:
       self.is_d_los_sum = np.sum(self.is_d_los,axis = 0)
       self.is_d_diff_sum = np.sum(self.is_d_diff, axis = 0)
 
-      self.is_d_noise = (self.is_d_los_sum + self.is_d_diff_sum).reshape(-1,self.sn.no_sensors)      
-      
-
-      
-
+      self.is_d_noise = (self.is_d_los_sum + self.is_d_diff_sum).reshape(-1,self.sn.no_sensors)

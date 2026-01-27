@@ -4,7 +4,7 @@ from typing import List, Optional
 from elements import *
 from surface import Surface
 from builder import RoomBuilder
-
+from const import *
 class Room:
     """
     Constructs the physical room environment for the simulation.
@@ -51,12 +51,12 @@ class Room:
         self.h_ww = None
 
         #Create wall surfaces
-        self.floor = Surface(np.array([L/2, W/2, 0]), (L, W), 2, res, nR = Constants.zp, nT = Constants.zp, refl=refl[0], name='Floor')
-        self.ceiling = Surface(np.array([L/2, W/2, H]), (L, W), 2,  res, nR = Constants.zm, nT = Constants.zm, refl=refl[1], name='Ceiling')
-        self.west_wall = Surface(np.array([0, W/2, H/2]), (W, H), 0, res, nR = Constants.xp, nT = Constants.xp, refl=refl[2], name='West Wall')
-        self.east_wall = Surface(np.array([L, W/2, H/2]), (W, H), 0, res, nR = Constants.xm, nT = Constants.xm, refl=refl[2], name='East Wall')
-        self.south_wall = Surface(np.array([L/2, 0, H/2]), (L, H), 1, res, nR = Constants.yp, nT = Constants.yp, refl=refl[2], name='South Wall')
-        self.north_wall = Surface(np.array([L/2, W, H/2]), (L, H), 1, res, nR = Constants.ym, nT = Constants.ym, refl=refl[2], name='East Wall')
+        self.floor = Surface(np.array([L/2, W/2, 0]), (L, W), 2, res, nR = SimulationDefaults.zp, nT = SimulationDefaults.zp, refl=refl[0], name='Floor')
+        self.ceiling = Surface(np.array([L/2, W/2, H]), (L, W), 2,  res, nR = SimulationDefaults.zm, nT = SimulationDefaults.zm, refl=refl[1], name='Ceiling')
+        self.west_wall = Surface(np.array([0, W/2, H/2]), (W, H), 0, res, nR = SimulationDefaults.xp, nT = SimulationDefaults.xp, refl=refl[2], name='West Wall')
+        self.east_wall = Surface(np.array([L, W/2, H/2]), (W, H), 0, res, nR = SimulationDefaults.xm, nT = SimulationDefaults.xm, refl=refl[2], name='East Wall')
+        self.south_wall = Surface(np.array([L/2, 0, H/2]), (L, H), 1, res, nR = SimulationDefaults.yp, nT = SimulationDefaults.yp, refl=refl[2], name='South Wall')
+        self.north_wall = Surface(np.array([L/2, W, H/2]), (L, H), 1, res, nR = SimulationDefaults.ym, nT = SimulationDefaults.ym, refl=refl[2], name='East Wall')
 
         self.walls = [self.floor, self.ceiling, self.west_wall, self.east_wall, self.south_wall, self.north_wall]
         self._build_master_element()
@@ -87,7 +87,7 @@ class Room:
       self.Tx_wall_elements = OpticalTxElements.merge(Tx_wall_elements)
       self.Rx_wall_elements = OpticalRxElements.merge(Rx_wall_elements)
 
-      
+
     def plot_surface_addition(self, new_surface, overlap_mask):
         """
         Visualizes the process of adding a new surface (like a Window or RIS) 

@@ -1,7 +1,7 @@
 import numpy as np
 from elements import *
 from spectral import *
-from const import Constants
+from const import *
 
 import numpy as np
 
@@ -20,7 +20,8 @@ class Surface:
         Tx_elements (OpticalTxElements): The transmission properties associated with the surface elements.
         Rx_elements (OpticalRxElements): The reception/reflection properties associated with the surface elements.
     """
-    def __init__(self, center, dims, const_axis, resolution, nT = np.array([0,0,1]), nR = np.array([0,0,1]),refl = 0.8, type = 'Wall',name=None, P = None):
+    def __init__(self, center, dims, const_axis, resolution, 
+                 nT=None, nR=None, refl=None, type='Wall', name=None, P=None):
         """
         Initialize the Surface.
 
@@ -42,21 +43,37 @@ class Surface:
         self.name = name
 
         # Normals will be tiled inside Element init, but we can prep them here
-        self.nT = nT
-        self.nR = nR
+        
+        target_nT = nT if nT is not None else SimulationDefaults.zp 
+        target_nR = nR if nR is not None else SimulationDefaults.zp 
+        
         self.refl = refl
         self.type = type
         self.P = 0 if P is None else P
 
         if self.type == "window":
-            self.P = Constants.pd_peak * self.A * SpectralPhysics.sun_power()
+            self.P = self.P = SimulationDefaults.pd_peak * self.A * SpectralPhysics.sun_power() 
 
 
         count = self.r_surface.shape[0]
 
 
-        self.Tx_elements = OpticalTxElements(r = self.r_surface, n = self.nT, p = self.P, m = 1)
-        self.Rx_elements = OpticalRxElements(r = self.r_surface, n = self.nR, A = self.A, refl = self.refl, fov = np.pi/2)
+        self.Tx_elements = OpticalTxElements(
+            r=self.r_surface, 
+            n=target_nT, 
+            p=self.P, 
+            m=None  
+        ) #
+
+        # OpticalRxElements.__post_init__ handles 'refl' and 'fov' fallbacks if passed as None
+        self.Rx_elements = OpticalRxElements(
+            r=self.r_surface, 
+            n=target_nR, 
+            A=self.A, 
+            refl=refl, 
+            fov=None,
+            type_Rx=0 # Surfaces default to standard Photodiode (PD) type
+        )
 
 
 

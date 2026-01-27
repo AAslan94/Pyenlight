@@ -14,13 +14,18 @@ class TIA:
         temperature (float or np.array): Temperature in Kelvin.
     """
 
-    def __init__(self, **argv):
-        self.RF = argv.pop('RF')
-        self.Vn = argv.pop('Vn')
-        self.In = argv.pop('In')
-        self.fncV = argv.pop('fncV')
-        self.fncI = argv.pop('fncI')
-        self.temperature = argv.pop('temperature')
+    def __init__(self, **kwargs):
+        # 1. Fetch the default dictionary
+        d = SimulationDefaults.tia
+
+        # 2. Assign parameters using pop logic or get fallback
+        # We use .get() to avoid KeyError if the key is missing in kwargs
+        self.RF = kwargs.get('RF', d['RF'])
+        self.Vn = kwargs.get('Vn', d['Vn'])
+        self.In = kwargs.get('In', d['In'])
+        self.fncV = kwargs.get('fncV', d['fncV'])
+        self.fncI = kwargs.get('fncI', d['fncI'])
+        self.temperature = kwargs.get('temperature', SimulationDefaults.T)
 
     # -----------------------------
     # Vectorized transfer function
@@ -44,7 +49,7 @@ class TIA:
     # PSDs (all vectorized)
     # -----------------------------
     def RF_psd(self, f, B):
-        return (4 * Constants.kB * self.temperature / self.RF) * np.ones((B.size, f.size))
+        return (4 * SimulationDefaults.kB * self.temperature / self.RF) * np.ones((B.size, f.size))
 
     def SV_psd(self, f, B):
         f = f[None, :]
@@ -97,17 +102,17 @@ class IRdriver:
                 - pol (array): Coefficients for I -> P (default provided).
                 - polinv (array): Coefficients for P -> I (default provided).
         """
+        # 0. fallback dictionary
+        d = SimulationDefaults.ir_driver
+        
         # 1. Extract params with defaults using kwargs.get()
-        self.imax = kwargs.get('imax', 100e-3)
-        self.imin = kwargs.get('imin', 0e-3)
+        self.imax = kwargs.get('imax', d['imax'])
+        self.imin = kwargs.get('imin', d['imin'])
         
         # Default polynomials (Polynomials for standard IR LED)
-        default_pol = np.array([ 1.35376064e-01,  1.86846949e-01, -1.01789073e-04])
-        default_polinv = np.array([-1.74039667e+01, 5.32917840e+00, 5.61867428e-04])
+        self.pol = np.array(kwargs.get('pol', d['pol']))
+        self.polinv = np.array(kwargs.get('polinv', d['polinv']))
         
-        # Ensure inputs are numpy arrays
-        self.pol = np.array(kwargs.get('pol', default_pol))
-        self.polinv = np.array(kwargs.get('polinv', default_polinv))
 
         # 2. Pre-calculate limits
         self.Pmax = np.polyval(self.pol, self.imax)
@@ -132,22 +137,42 @@ class IRdriver:
         return np.polyval(self.pol, I)
         
 def RF_calc_I(P, **kwargs):
-  """
-  Estimates the power consumption current of the RF transmitter.
-  
-  Args:
-      P (float or np.ndarray): RF Transmit Power (dBm).
-      **kwargs: Optional dictionary containing:
-          - pol (array): Polynomial coefficients [slope, intercept]. 
-                         Default: [0.24, 8.8]
-  
-  Returns:
-      float or np.ndarray: Supply Current (Amps).
-  """
-  # Extract 'pol' from kwargs, or use default if missing
-  default_pol = np.array([0.24, 8.8])
-  pol = kwargs.get('pol', default_pol)
-  
-  # Calculation
-  I = np.polyval(pol, P) * 1e-3
-  return I
+    """
+    Estimates the power consumption current of the RF transmitter.
+    
+    Args:
+        P (float or np.ndarray): RF Transmit Power (dBm).
+        **kwargs: 
+            - p_min (float): Min power limit. Default: -20
+            - p_max (float): Max power limit. Default: 5
+            - pol (array): [slope, intercept]. Default: [0.24, 8.8]
+    """
+    # 0. fallback values
+    d = SimulationDefaults.rf_driver
+    
+    # 1. Extract parameters from kwargs with fallbacks
+    p_min = kwargs.get('p_min', d['p_min'])
+    p_max = kwargs.get('p_max', d['p_max'])
+    pol = kwargs.get('pol', d['pol'])
+
+    # 2. Ensure P is a numpy array for consistent masking/clipping
+    P_bounded = np.array(P, copy=True)
+    
+    # 3. Apply the clipping/logic
+    # Anything below p_min is treated as p_min
+    P_bounded[P_bounded < p_min] = p_min
+    
+    # Identify values exceeding p_max for infinity current later
+    over_limit_mask = P_bounded > p_max
+
+    # 4. Calculation using the bounded power
+    # np.atleast_1d handles the "Node 0" scalar case to prevent size mismatches
+    I = np.atleast_1d(np.polyval(pol, P_bounded) * 1e-3)
+    
+    # 5. Apply infinity to current for values exceeding limits
+    if np.any(over_limit_mask):
+        I = I.astype(float) # Ensure we can hold np.inf
+        I[over_limit_mask] = np.inf
+        
+    # Return as scalar if input was scalar, else return array
+    return I.item() if np.isscalar(P) else I

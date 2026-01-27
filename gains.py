@@ -23,19 +23,19 @@ class Gains:
       h_diff (np.ndarray): Diffuse (multi-bounce) channel gain matrix (Nt, Nr).
       h_ris (np.ndarray): RIS-reflected channel gain matrix (Nt, Nr).
   """
-  def __init__(self, room, optRx, optTx):
+  def __init__(self, room: Room, optRx, optTx):
     self.room = room
     self.masters = optTx
     self.sensors = optRx
 
     self.h_diff = None
     self.h_los = None
-    
+
     if self.room.h_ww is None:
-            self.room.h_ww = self.calc_h(
-                self.room.Tx_wall_elements, 
-                self.room.Rx_wall_elements
-            )
+        self.room.h_ww = self.calc_h(
+        self.room.Tx_wall_elements, 
+        self.room.Rx_wall_elements
+        )
 
 
 
@@ -61,18 +61,17 @@ class Gains:
         np.ndarray: Path loss values in dB.
     """
     # Extract coefficients from kwargs with existing values as defaults
-    n = kwargs.get('n', 1.46)
-    pl_ref = kwargs.get('pl_ref', 34.62)
-    k = kwargs.get('k', 2.03)
-    f = kwargs.get('f', 2.45)
-    sigma = kwargs.get('sigma', 3.76)
-    sigma_factor = kwargs.get('sigma_factor', 2)
+    n = kwargs.get('n', SimulationDefaults.rf_n)
+    pl_ref = kwargs.get('pl_ref', SimulationDefaults.rf_pl_ref)
+    k = kwargs.get('k', SimulationDefaults.rf_k)
+    f = kwargs.get('f', SimulationDefaults.rf_f)
+    sigma = kwargs.get('sigma', SimulationDefaults.rf_sigma)
+    sigma_factor = kwargs.get('sigma_factor', SimulationDefaults.rf_sigma_factor)
 
-    # Calculate distance
+    # Distance calculation remains geometric
     D_tx_rx = -(tx.r[:, None, :] - rx.r[None, :, :])
     d = np.linalg.norm(D_tx_rx, axis=2)
 
-    # Calculate Path Loss
     return (10 * n * np.log10(d)) + pl_ref + (10 * k * np.log10(f)) + (sigma_factor * sigma)
 
   @staticmethod
@@ -177,8 +176,6 @@ class Gains:
     self.h_mw = self.calc_h(tx = self.masters, rx = self.room.Rx_wall_elements)
     self.h_ws = self.calc_h(tx = self.room.Tx_wall_elements, rx= self.sensors)
 
-    if self.room.h_ww is None:
-        self.room.intra_wall_gains()
 
     R = np.diag(self.room.Rx_wall_elements.refl.flatten())
     current_wall_power = self.h_mw @ R
@@ -203,9 +200,8 @@ class Gains:
       or amplitude-only modeling depending on context.
       """
       self.h_ris = np.zeros((self.masters.N, self.sensors.N))
-      
       if self.room.Tx_RIS_elements is None:
-          print("You need to add a RIS surface first")
+          #print("You need to add a RIS surface first")
           return
       else:
           self.no_masters = self.masters.r.shape[0]

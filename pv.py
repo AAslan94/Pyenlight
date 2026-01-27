@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import lambertw
 from typing import Dict, Optional, Any
 from spatial import to_scal_Nx1
-from const import Constants
+from const import *
 
 class PV:
     """
@@ -20,13 +20,16 @@ class PV:
             unscaled: If True, scales Rs, Rsh, Jsc by Area.
             **kwargs: Overrides for circuit (Rs, Rsh...) or physics (Na, Nd...) params.
         """
+  
+        
+        
         # 1. Setup Input Vectors
         self.Gamb = np.array(Gamb).reshape(-1, 1)
         self.Gsignal = np.array(Gsignal).reshape(-1, 1)
         self.no_pv = self.Gamb.shape[0]
         self.Gref = 1000.0
 
-        # 2. Initialize Parameters
+        # 2. Initialize Parameters (Circuit + Physics)
         # 
         self._init_params(kwargs)
 
@@ -77,19 +80,17 @@ class PV:
           self.vp2p(self.f)
 
     def _init_params(self, kwargs):
-        """Unified handler for all parameters with defaults."""
-        defaults = {
-            # Circuit Model
-            'A': 1e-4, 'n': 1.6, 'Rs': 1, 'Rsh': 1e3,
-            'Voc': 0.64, 'Jsc': 35e-3,
-            'Lo': 1e-6, 'Co': 1e-6, 'Rc': 10,
-            # Physical Model (PV manufacturing params)
-            'Na': 1e16 * 1e6, 'Nd': 1e19 * 1e6, 'L': 300e-6,
-            'er': 11.68, 'ni': 1e10 * 1e6
-        }
+        """Unified handler pulling from SimulationDefaults.pv_circuit."""
+        
+        d = SimulationDefaults.pv_circuit
 
-        for key, default in defaults.items():
-            val = kwargs.get(key, default)
+        # List all keys needed by the class
+        keys = ['A', 'n', 'Rs', 'Rsh', 'Voc', 'Jsc', 'Lo', 'Co', 'Rc', 
+                'Na', 'Nd', 'L', 'er', 'ni']
+
+        for key in keys:
+            # Check kwargs first, then the global dictionary
+            val = kwargs.get(key, d.get(key))
             setattr(self, key, to_scal_Nx1(self.no_pv, val))
 
     def _scale_params(self):
@@ -104,7 +105,7 @@ class PV:
         if not hasattr(self, 'Isc'): self.Isc = self.Jsc
 
         self.Iph = self.Isc.copy()
-        self.Vt = Constants.kB * Constants.T / Constants.q
+        self.Vt = SimulationDefaults.kB * SimulationDefaults.T / SimulationDefaults.q
 
         # Scale for Irradiance
         self.Iph *= (self.Gamb+self.Gsignal) / self.Gref
@@ -145,8 +146,8 @@ class PV:
 
     def calc_capacitance(self):
         """Calculates junction capacitance using physics parameters."""
-        es = self.er * Constants.eo
-        q = Constants.q
+        es = self.er * SimulationDefaults.eo
+        q = SimulationDefaults.q
 
         no = self.ni**2 / self.Na
         vbi = self.Vt * np.log(self.Na * self.Nd / self.ni**2)
@@ -190,7 +191,7 @@ class PV:
     # --- Noise Methods ---
     def _thermal_noise_base(self):
         """Helper to init thermal noise densities."""
-        kT = 4 * Constants.kB * Constants.T
+        kT = 4 * SimulationDefaults.kB * SimulationDefaults.T
         self.No_r = kT * self.r
         self.No_Rs = kT * self.Rs
         self.No_Rsh = kT * self.Rsh
@@ -287,7 +288,7 @@ class PV:
         t = np.abs(self.hpv)**2
         # Integration
         integral = np.trapz(t, f[:, None, :], axis=2)
-        self.sh_noise = 2 * Constants.q * self.Iph * integral
+        self.sh_noise = 2 * SimulationDefaults.q * self.Iph * integral
 
     def vp2p(self,f):
       self.vac = self.hpv * self.iac[:,None]

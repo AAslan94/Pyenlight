@@ -20,6 +20,7 @@ class Elements:
     r: np.ndarray  # (N, 3) Position
     n: np.ndarray  = field(default_factory=lambda: np.array([0,0,1]))  # (N, 3) Orientation/Normal
 
+
     def __post_init__(self):
         """
         Validates inputs and ensures data is stored as (N, 3) numpy arrays.
@@ -35,12 +36,9 @@ class Elements:
 
         self.N = self.r.shape[0]
         self.n = to_vec_Nx3(self.N, self.n)
-
-        #Normalize to unit magnitude
         norms = np.linalg.norm(self.n, axis=1, keepdims=True)
         if not np.allclose(norms, 1.0):
             self.n = self.n / norms
-
 
     def __add__(self, other):
         """
@@ -151,15 +149,17 @@ class OpticalTxElements(Elements):
         m (np.ndarray): Lambertian order of emission (mode number).
     """
     """Properties specific to Transmitters."""
-    p: np.ndarray = 1
-    m: np.ndarray = DefaultSimValues.m
+    p: np.ndarray = None # Default to None to trigger the safety net
+    m: np.ndarray = None # Default to None to trigger the safety net
 
     def __post_init__(self):
-        super().__post_init__() # This creates self.N
+        super().__post_init__() # Inherits self.N from Elements base class
 
-        self.p = np.array(self.p)
-        self.m = np.array(self.m)
+        # 1. Fallback to SimulationDefaults if nothing was passed
+        p_val = self.p if self.p is not None else SimulationDefaults.p
+        m_val = self.m if self.m is not None else SimulationDefaults.m
 
+        ## 2. Broadcast to (N, 1) to ensure compatibility with channel gain math
         self.p = to_scal_Nx1(self.N, self.p)
         self.m = to_scal_Nx1(self.N, self.m)
 
@@ -175,22 +175,24 @@ class OpticalRxElements(Elements):
         type_Rx (np.ndarray): Identifier for receiver type (e.g., 0 for photodiode / surface elements, 1 for photovoltaic panel).
     """
     """Properties specific to Receivers."""
-    A: np.ndarray = DefaultSimValues.A
-    fov: np.ndarray = DefaultSimValues.fov
-    refl: np.ndarray = None
-    type_Rx: np.ndarray = 0
+    A: np.ndarray = None        # Active detection area (m^2)
+    fov: np.ndarray = None      # Field of View (half-angle radians)
+    refl: np.ndarray = None     # Reflection coefficient
+    type_Rx: np.ndarray = None  # Identifier (0=PD, 1=PV)
 
     def __post_init__(self):
         super().__post_init__()
 
-        self.fov = np.array(self.fov)
-        self.fov = to_scal_Nx1(self.N, self.fov)
-        self.type_Rx = to_scal_Nx1(self.N, self.type_Rx)
-        self.A = to_scal_Nx1(self.N,self.A)
+        a_val = self.A if self.A is not None else SimulationDefaults.rx_area
+        f_val = self.fov if self.fov is not None else SimulationDefaults.fov
+        t_val = self.type_Rx if self.type_Rx is not None else SimulationDefaults.rx_type
+        r_val = self.refl if self.refl is not None else SimulationDefaults.reflectivity
 
-        if self.refl is not None:
-            self.refl = np.array(self.refl)
-            self.refl = to_scal_Nx1(self.N, self.refl)
+        # 2. Broadcast to (N, 1) to match geometry matrices
+        self.A = to_scal_Nx1(self.N, np.array(a_val))
+        self.fov = to_scal_Nx1(self.N, np.array(f_val))
+        self.type_Rx = to_scal_Nx1(self.N, np.array(t_val))
+        self.refl = to_scal_Nx1(self.N, np.array(r_val))
 
 @dataclass
 class RFTxElements(Elements):
@@ -207,4 +209,4 @@ class RFTxElements(Elements):
     def __post_init__(self):
         super().__post_init__()
 
-        self.p = np.array(self.p)
+        p_val = self.p if self.p is not None else SimulationDefaults.rf_driver['p_min']

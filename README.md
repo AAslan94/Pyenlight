@@ -176,7 +176,7 @@ aster_design = {
         'harvesting_hours': 12.0
     }
 }
-
+##
 
 🇪🇺 Funding & Acknowledgements
 

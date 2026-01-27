@@ -45,7 +45,7 @@ The simulation is driven by a configuration dictionary passed to the PhyNet kern
 
 ## 🧩 Comprehensive Design Example
 
-The following example demonstrates a **fully populated design dictionary** intended for **stress-testing**, validation, and use as a **reference template**.  
+The following example demonstrates a **fully populated design dictionary** intended for a **reference template**.  
 It exercises **all major subsystems** of EnLight-IoT, including environment modeling, RIS, hybrid VLC/RF nodes, PV energy harvesting, analog front-end overrides, and protocol-level energy profiling.
 
 ```python

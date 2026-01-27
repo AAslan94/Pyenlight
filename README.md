@@ -22,7 +22,7 @@ The library is organized into distinct modules handling specific aspects of the 
 | Module | Description |
 | :--- | :--- |
 | `phy.py` | **Simulation Kernel**: The main entry point (`PhyNet`) that orchestrates the build, physics, and analysis phases. |
-| `nodemanager.py` | **Node Logic**: Manages Sensors (`SNManager`), Masters (`MNManager`), and Ambient sources. Handles optical/RF elements and gain calculations. |
+| `nodemanager.py` | **Node Logic**: Manages Sensors (`SNManager`), Masters (`MNManager`), and Ambient sources('ANManager'). Handles optical/RF elements and gain calculations. |
 | `room.py` | **Environment**: Constructs the physical room, managing walls, windows, and RIS surfaces. |
 | `pv.py` | **Energy Harvesting**: A physics-based model for photovoltaic cells, calculating IV curves and noise equivalent circuits. |
 | `spectral.py` | **Spectral Engine**: Handles spectral overlap integrals for LEDs, lasers, and solar radiation against specific photodiode/filter responses. |

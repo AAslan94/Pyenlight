@@ -37,13 +37,18 @@ Clone the repository and install the required dependencies:
 git clone https://github.com/yourusername/EnLight-IoT.git
 cd EnLight-IoT
 pip install numpy scipy matplotlib
+```
+
 💻 Usage
+
 The simulation is driven by a configuration dictionary passed to the PhyNet kernel.
 
 🇪🇺 Funding & Acknowledgements
+
 This work is supported by the EU OWIN6G DN (Optical and Wireless Internet for 6G Doctoral Network).
 
 📝 License
+
 This project is currently available for review.
 Full open-source licensing details will be provided immediately following the formal publication of the associated research paper.
 

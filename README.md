@@ -44,7 +44,6 @@ The simulation is driven by a configuration dictionary passed to the PhyNet kern
 🇪🇺 Funding & Acknowledgements
 This work is supported by the EU OWIN6G DN (Optical and Wireless Internet for 6G Doctoral Network).
 
-<img src="https://www.google.com/search?q=https://owin6g.eu/wp-content/uploads/2023/01/logo-owin6g.png" alt="OWIN6G Logo" width="200"/>
 
 📝 License
 This project is currently available for review. Full open-source licensing details will be provided immediately following the formal publication of the associated research paper.

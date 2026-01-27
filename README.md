@@ -49,10 +49,8 @@ The following example demonstrates a **fully populated design dictionary** inten
 It exercises **all major subsystems** of EnLight-IoT, including environment modeling, RIS, hybrid VLC/RF nodes, PV energy harvesting, analog front-end overrides, and protocol-level energy profiling.
 
 ```python
-import numpy as np
-from defaults import SimulationDefaults
 
-aster_design = {
+master_design = {
     'meta': {
         'name': 'Comprehensive_Simulation_Template',
         'description': 'A design populating every available parameter for stress-testing and template use.'
@@ -176,7 +174,7 @@ aster_design = {
         'harvesting_hours': 12.0
     }
 }
-##
+```
 
 🇪🇺 Funding & Acknowledgements
 

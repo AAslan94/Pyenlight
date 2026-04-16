@@ -115,7 +115,7 @@ class NodeBuilder():
           self.uplink_type = to_scal_Nx1(self.positions.reshape(-1,3).shape[0], self.uplink_type).flatten()
           self.no_optical_uplinks = np.where(np.array([self.uplink_type])==0)[0].size
           self.no_RF_uplinks = np.where(np.array([self.uplink_type])==1)[0].size
-          self.nT = np.array(self.nR)
+          self.nT = np.array(self.nT)
           self.m = np.array(self.m)
 
 

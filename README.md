@@ -1,6 +1,6 @@
-# Py-EnLight: Hybrid VLC/RF & Energy Harvesting Simulation Framework
+# PyenLight: Hybrid VLC/RF & Energy Harvesting Simulation Framework
 
-**Py_EnLight** is a high-fidelity Python simulation library designed for **Hybrid Optical Wireless (VLC/LiFi) and RF IoT networks**. It goes beyond simple channel modeling by integrating a comprehensive physical layer engine that accounts for spectral overlaps, realistic energy harvesting (PV) characteristics, and complex environmental interactions like Reconfigurable Intelligent Surfaces (RIS).
+**PyenLight** is a high-fidelity Python simulation library designed for **Hybrid Optical Wireless (VLC/LiFi) and RF IoT networks**. It goes beyond simple channel modeling by integrating a comprehensive physical layer engine that accounts for spectral overlaps, realistic energy harvesting (PV) characteristics, and complex environmental interactions like Reconfigurable Intelligent Surfaces (RIS).
 
 > **Documentation**: This codebase features **extensive internal documentation in Markdown format**. Each class and method is fully documented to guide usage, modification, and understanding of the underlying physics.
 
